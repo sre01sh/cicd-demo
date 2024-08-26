@@ -101,7 +101,7 @@ parameters {
 					    if (Environment.equals("prod")){
                                options = PROD_VMOPTIONS
                             }
-					    sh "ansible-playbook /etc/ansible/dg1_springboot.yml -e buildno=${env.BUILD_NUMBER} -e logduration=$LOG_DURATION -e 'servers=${params.Servers}' -e 'env=$SITE+${params.Environment}' -e 'version=${version}' -e 'artifactId=${artifactId}' -e 'absPathFile=${absPathFile}' -e 'jarFile=${jarFile}' -e 'options=${options}'"
+					    sh "ansible-playbook /etc/ansible/dg1_springboot.yml -e buildno=${env.BUILD_NUMBER} -e logduration=$LOG_DURATION -e 'servers=${params.Servers}' -e 'env=$SITE${params.Environment}' -e 'version=${version}' -e 'artifactId=${artifactId}' -e 'absPathFile=${absPathFile}' -e 'jarFile=${jarFile}' -e 'options=${options}'"
 						}
 					}
 				}

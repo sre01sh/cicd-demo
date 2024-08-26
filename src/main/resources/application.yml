@@ -1,5 +1,5 @@
 server.port: 8500
-
+spring.application.name: demo
 app.env: root
 
 logging:
