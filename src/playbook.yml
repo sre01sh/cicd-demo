@@ -1,0 +1,71 @@
+---
+- hosts: "{{servers}}"
+  gather_facts: no
+  vars:
+    env: "{{env}}"
+    version: "{{version}}"
+    artifactId: "{{artifactId}}"
+    jarFile: "{{jarFile}}"
+    jvmoptions: "{{options}}"
+    absPathFile: "{{absPathFile}}"
+    logduration: "{{logduration}}"
+  tasks:
+    - name: "create backup dir"
+      file:
+        path: "/app/spring/backup/{{artifactId}}"
+        state: directory
+        mode: 0775
+        group: support
+    - name: Find all files in the directory
+      find:
+        path: "/app/spring/backup/{{artifactId}}"
+        file_type: file
+      register: found_files
+    - name: Remove files except the most recent 5
+      file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ found_files.files | sort(attribute='mtime', reverse=True)  }}"
+      loop_control:
+        index_var: index
+      when: (found_files.files | length > 5) and (index >= 5)
+    - name: "copy artifacts to remote servers"
+      copy:
+        src: "{{absPathFile}}"
+        dest: "/app/spring/backup/{{artifactId}}/{{jarFile}}"
+        mode: 0644
+        group: support
+    - name: Find service process PID
+      shell: "jps | grep {{artifactId}} | awk '{print $1}'"
+      register: pid
+      ignore_errors: yes
+    - name: "show pid"
+      debug:
+          var: pid
+    - name: Kill service process if found
+      shell: "kill {{ pid.stdout }}"
+      when: pid.stdout != ""
+      ignore_errors: yes
+    - name: Wait for the process to be killed
+      shell: "jps | grep {{ pid.stdout }}"
+      ignore_errors: yes
+      register: check_process
+      retries: 60
+      delay: 2 
+      until: check_process.rc != 0
+      when: pid.stdout != "" 
+    - name: "deploy service"
+      copy:
+        src: "/app/spring/backup/{{artifactId}}/{{jarFile}}"
+        dest: "/app/spring/{{jarFile}}"
+        remote_src: true
+        mode: 0755
+        group: support
+    - name: "start service"
+      shell: "/bin/nohup java {{jvmoptions}} -jar /app/spring/{{jarFile}} --spring.profiles.active={{env}} >/dev/null 2>&1 &"
+    - debug:
+        msg: "/bin/nohup java {{jvmoptions}} -jar /app/spring/{{jarFile}} --spring.profiles.active={{env}} >/dev/null 2>&1 &"
+    - name: "show log"
+      shell: "timeout {{logduration}} tail -f /app/spring/logs/{{artifactId}}/molex*.log"
+      ignore_errors: yes
+
