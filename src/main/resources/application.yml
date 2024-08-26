@@ -1,3 +1,7 @@
 server.port: 8500
 
 app.env: root
+
+logging:
+  file:
+    name: logs/${spring.application.name}/${spring.application.name}.log

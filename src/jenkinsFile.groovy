@@ -25,8 +25,16 @@ properties([
 
 pipeline {
     agent none
+    environment {
+                SITE = 'dg1#'
+                JENKINS_ID =  '1000:1000'
+                LOG_DURATION = 10
+                QA_VMOPTIONS = "\"-Xms1g -Xmx2g\""
+                PROD_VMOPTIONS = "\"-Xms2g -Xmx4g\""
+                // JENKINS_ID =  '55080:55081'
+            }
 parameters {
-        choice(name: 'Environment', choices: ['dg1#qa', 'dg1#prod'])
+        choice(name: 'Environment', choices: ['qa', 'prod'])
     }
     stages {
         stage("Checkout and build") {
@@ -49,16 +57,16 @@ parameters {
 				stage('Checkout') {
 					steps {
 					    echo "projectName: ${env.JOB_BASE_NAME}"
-						git branch: 'main', 
-							url: "https://kochsource.io/molex-dg/${env.JOB_BASE_NAME}.git",
-							credentialsId: 'gitlabf'
+						// git branch: 'main', url: "https://kochsource.io/molex-dg/${env.JOB_BASE_NAME}.git", credentialsId: 'gitlabf'
+                        git branch: 'main', url: "https://github.com/sre01sh/cicd-demo.git"
+                        
 					}
 				}
 				stage('Build') {
                     steps {
                         script {
                         sh 'mvn -DskipTests clean package '
-                        sh 'chown -R 55080:55081 ./target'
+                        sh 'chown -R $JENKINS_ID ./target'
                         }
                     }
         }
@@ -89,11 +97,11 @@ parameters {
                         sh "ls -lrht ${filePath}/target/${jarFile}"
                         def absPathFile="${filePath}/target/${jarFile}"
 					    sh "ansible ${params.Servers} -m ping"
-					    def options = "\"-Xms1g -Xmx2g\""
+					    def options = QA_VMOPTIONS
 					    if (Environment.equals("prod")){
-                               options = "\"-Xms2g -Xmx4g\""
+                               options = PROD_VMOPTIONS
                             }
-					    sh "ansible-playbook /etc/ansible/dg1_springboot.yml -e logduration=10 -e 'servers=${params.Servers}' -e 'env=${params.Environment}' -e 'version=${version}' -e 'artifactId=${artifactId}' -e 'absPathFile=${absPathFile}' -e 'jarFile=${jarFile}' -e 'options=${options}'"
+					    sh "ansible-playbook /etc/ansible/dg1_springboot.yml -e buildno=${env.BUILD_NUMBER} -e logduration=$LOG_DURATION -e 'servers=${params.Servers}' -e 'env=$SITE+${params.Environment}' -e 'version=${version}' -e 'artifactId=${artifactId}' -e 'absPathFile=${absPathFile}' -e 'jarFile=${jarFile}' -e 'options=${options}'"
 						}
 					}
 				}
