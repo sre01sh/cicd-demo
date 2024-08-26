@@ -9,6 +9,7 @@
     jvmoptions: "{{options}}"
     absPathFile: "{{absPathFile}}"
     logduration: "{{logduration}}"
+    buildno: "{{buildno}}"
   tasks:
     - name: "create backup dir"
       file:
@@ -32,7 +33,7 @@
     - name: "copy artifacts to remote servers"
       copy:
         src: "{{absPathFile}}"
-        dest: "/app/spring/backup/{{artifactId}}/{{jarFile}}"
+        dest: "/app/spring/backup/{{artifactId}}/{{jarFile}}.{{buildno}}"
         mode: 0644
         group: support
     - name: Find service process PID
@@ -56,7 +57,7 @@
       when: pid.stdout != "" 
     - name: "deploy service"
       copy:
-        src: "/app/spring/backup/{{artifactId}}/{{jarFile}}"
+        src: "/app/spring/backup/{{artifactId}}/{{jarFile}}.{{buildno}}"
         dest: "/app/spring/{{jarFile}}"
         remote_src: true
         mode: 0755
@@ -66,6 +67,6 @@
     - debug:
         msg: "/bin/nohup java {{jvmoptions}} -jar /app/spring/{{jarFile}} --spring.profiles.active={{env}} >/dev/null 2>&1 &"
     - name: "show log"
-      shell: "timeout {{logduration}} tail -f /app/spring/logs/{{artifactId}}/molex*.log"
+      shell: "timeout {{logduration}} tail -f /app/spring/logs/{{artifactId}}/*.log"
       ignore_errors: yes
 
